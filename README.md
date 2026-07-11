@@ -44,9 +44,11 @@ cp .env.example .env
 docker compose up --build
 ```
 
-- Backend: http://localhost:8000 (docs at `/docs`)
-- Frontend: http://localhost:3000
+- Backend: http://localhost:8100 (docs at `/docs`)
+- Frontend: http://localhost:3100
 - Postgres: localhost:5432, Qdrant: localhost:6333
+
+> Ports are **8100**/**3100**, not the more common 8000/3000, specifically so this doesn't clash with another project you may already have running locally. Change them in `.env` / `docker-compose.yml` / the `npm run dev`+`uvicorn` commands below if you'd like different ports instead.
 
 Then, one-time setup inside the backend container (or locally, see Option B):
 ```bash
@@ -72,15 +74,16 @@ python3 scripts/seed_db.py
 python3 scripts/ingest_policies.py
 python3 scripts/train_fraud_model.py
 python3 scripts/run_pipeline_batch.py     # optional but recommended: pre-populates the queue/analytics with all 400 claims
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8100
 
 # Frontend (separate terminal)
 cd frontend
 npm install
-npm run dev -- --port 3000
+cp .env.local.example .env.local   # points the frontend at http://localhost:8100
+npm run dev -- --port 3100
 ```
 
-Then open **http://localhost:3000**.
+Then open **http://localhost:3100**.
 
 No `ANTHROPIC_API_KEY` is required to run the full system — see "Mock mode" below.
 
