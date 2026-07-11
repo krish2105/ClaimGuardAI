@@ -8,7 +8,8 @@ services:
       POSTGRES_PASSWORD: claimguard
       POSTGRES_DB: claimguard
     ports:
-      - "5432:5432"
+      # Host port 5433 (not 5432) to avoid clashing with another local Postgres.
+      - "5433:5432"
     volumes:
       - claimguard_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -22,8 +23,9 @@ services:
     container_name: claimguard_qdrant
     restart: unless-stopped
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      # Host ports 6433/6434 (not 6333/6334) to avoid clashing with another local Qdrant.
+      - "6433:6333"
+      - "6434:6334"
     volumes:
       - claimguard_qdrant_data:/qdrant/storage
     healthcheck:
@@ -56,11 +58,14 @@ services:
   frontend:
     build:
       context: ./frontend
+      # NEXT_PUBLIC_* vars are inlined into the browser bundle at build time,
+      # so they're passed as build args here, not as container `environment:`
+      # (which would have no effect on an already-built .next output).
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8100
+        NEXT_PUBLIC_WS_BASE_URL: ws://localhost:8100
     container_name: claimguard_frontend
     restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8100
-      NEXT_PUBLIC_WS_BASE_URL: ws://localhost:8100
     ports:
       # Host port 3100 (not 3000) to avoid clashing with other local projects.
       - "3100:3000"

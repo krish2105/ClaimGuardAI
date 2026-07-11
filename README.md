@@ -41,23 +41,30 @@ Postgres (claims, decisions, escalations, audit_log) + Next.js Adjuster Dashboar
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build -d
 ```
+
+`-d` runs it in the background so your terminal is free for the next step. This builds and starts 4 containers: Postgres, Qdrant, the FastAPI backend, and the Next.js frontend.
 
 - Backend: http://localhost:8100 (docs at `/docs`)
 - Frontend: http://localhost:3100
-- Postgres: localhost:5432, Qdrant: localhost:6333
+- Postgres: localhost:5433, Qdrant: localhost:6433
 
-> Ports are **8100**/**3100**, not the more common 8000/3000, specifically so this doesn't clash with another project you may already have running locally. Change them in `.env` / `docker-compose.yml` / the `npm run dev`+`uvicorn` commands below if you'd like different ports instead.
+> Ports are **8100/3100/5433/6433/6434**, not the more common 8000/3000/5432/6333/6334, specifically so this doesn't clash with other projects you may already have running locally. Change them in `docker-compose.yml` if you'd like different ports instead.
 
-Then, one-time setup inside the backend container (or locally, see Option B):
+Once `docker compose up` finishes starting all 4 containers (check with `docker compose ps` — all should say "running" or "healthy"), run this **one-time setup**, executed *inside* the already-running backend container:
+
 ```bash
-python backend/scripts/generate_dataset.py     # writes backend/data/{claims,providers}.csv
-python backend/scripts/seed_db.py              # creates tables + loads the CSVs into Postgres
-python backend/scripts/ingest_policies.py      # embeds policies/*.md into Qdrant
-python backend/scripts/train_fraud_model.py    # trains + saves the XGBoost model
-python backend/scripts/run_pipeline_batch.py   # runs all 400 seeded claims through the pipeline
+docker compose exec backend python scripts/generate_dataset.py
+docker compose exec backend python scripts/seed_db.py
+docker compose exec backend python scripts/ingest_policies.py
+docker compose exec backend python scripts/train_fraud_model.py
+docker compose exec backend python scripts/run_pipeline_batch.py
 ```
+
+Run each line one at a time and let it finish before the next (`run_pipeline_batch.py` takes the longest — a minute or two for all 400 claims). Then open **http://localhost:3100**.
+
+To stop everything later: `docker compose down` (add `-v` to also wipe the database/vector store).
 
 ### Option B — No Docker (what this build environment actually used)
 
