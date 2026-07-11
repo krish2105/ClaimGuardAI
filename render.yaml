@@ -1,16 +1,20 @@
 # Render "Blueprint" — deploys the FastAPI backend, a self-hosted Qdrant
-# instance (private, internal-only — no separate Qdrant Cloud account
-# needed), and a managed Postgres database, all in one step. Import this
+# instance, and a managed Postgres database, all in one step. Import this
 # repo at https://dashboard.render.com/blueprints
 #
-# Note: the free-tier Qdrant private service has no persistent disk, so its
-# data is wiped on every redeploy/restart — re-run
-# `scripts/ingest_policies.py` afterward (it takes a few seconds). Upgrade
-# claimguard-qdrant to a paid instance type with a disk if you want the
-# index to survive restarts.
+# Qdrant is deployed as a `web` service, not `pserv` (private service) —
+# Render's free/workspace plan doesn't support private services at all
+# ("service type is not available for this plan"). A `web` service does
+# get a public URL, so it's locked down with an auto-generated API key
+# (QDRANT__SERVICE__API_KEY) shared with the backend via QDRANT_API_KEY —
+# nobody without that key can read/write the index. The backend still
+# reaches it over Render's internal network (http://claimguard-qdrant:6333),
+# not the public internet, so this costs nothing extra in latency.
 #
-# See docs/DEPLOYMENT.md for the full walkthrough (including the frontend
-# on Vercel).
+# Note: the free-tier Qdrant service has no persistent disk, so its data is
+# wiped on every redeploy/restart — re-run POST /admin/seed afterward (see
+# docs/DEPLOYMENT.md). Upgrade claimguard-qdrant to a paid instance type
+# with a disk if you want the index to survive restarts.
 databases:
   - name: claimguard-postgres
     plan: free
@@ -18,12 +22,15 @@ databases:
     user: claimguard
 
 services:
-  - type: pserv
+  - type: web
     name: claimguard-qdrant
     runtime: image
     image:
       url: docker.io/qdrant/qdrant:v1.12.4
     plan: free
+    envVars:
+      - key: QDRANT__SERVICE__API_KEY
+        generateValue: true
 
   - type: web
     name: claimguard-backend
@@ -40,6 +47,11 @@ services:
           property: connectionString
       - key: QDRANT_URL
         value: http://claimguard-qdrant:6333
+      - key: QDRANT_API_KEY
+        fromService:
+          name: claimguard-qdrant
+          type: web
+          envVarKey: QDRANT__SERVICE__API_KEY
       - key: ANTHROPIC_API_KEY
         sync: false  # optional — leave blank to run in mock mode
       - key: CLAUDE_MODEL_REASONING

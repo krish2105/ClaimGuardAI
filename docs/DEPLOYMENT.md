@@ -20,7 +20,7 @@ single `curl` command, no shell access to the host required.
 1. Push this repo to your GitHub (already done — `krish2105/ClaimGuardAI`, branch `claude/claimguard-ai-build-wchf2x`).
 2. Go to https://dashboard.render.com/blueprints → **New Blueprint Instance** → pick this repo/branch. Render reads `render.yaml` at the repo root and provisions three things in one step:
    - a free Postgres database (`claimguard-postgres`)
-   - a **private** Qdrant service (`claimguard-qdrant`) — internal-only, not reachable from outside Render, so nobody but your own backend can hit it
+   - a Qdrant service (`claimguard-qdrant`) — Render's free/workspace plan doesn't support *private* services at all, so this is a public `web` service instead, locked down with an auto-generated API key (`QDRANT__SERVICE__API_KEY`) that only your backend knows
    - the FastAPI backend (`claimguard-backend`), built from `backend/Dockerfile`
 3. Render will ask you to fill in a couple of env vars it can't infer (marked `sync: false` in `render.yaml`):
    - `CORS_ORIGINS` → leave blank for now; you'll set this in step 3 below once you have your Vercel URL
@@ -30,14 +30,13 @@ single `curl` command, no shell access to the host required.
 
 ### Load the data (one HTTP call, no shell needed)
 
-Render's free tier gives you no interactive shell, and Qdrant is a *private*
-service with no external address — so instead of running scripts against a
-remote database from your laptop, this repo exposes a one-time bootstrap
-endpoint on the backend itself (`app/api/routes_admin.py`). It generates the
-synthetic dataset, seeds Postgres, embeds the policy corpus into Qdrant,
-trains the fraud model, and runs all 400 claims through the pipeline — all
-in the background, inside Render's network where everything can actually
-reach everything else.
+Render's free tier gives you no interactive shell, so instead of running
+scripts against a remote database from your laptop, this repo exposes a
+one-time bootstrap endpoint on the backend itself (`app/api/routes_admin.py`).
+It generates the synthetic dataset, seeds Postgres, embeds the policy corpus
+into Qdrant, trains the fraud model, and runs all 400 claims through the
+pipeline — all in the background, inside Render's network where everything
+can actually reach everything else.
 
 ```bash
 # Get ADMIN_SEED_TOKEN from Render → claimguard-backend → Environment
@@ -48,10 +47,10 @@ curl -X POST https://claimguard-backend.onrender.com/admin/seed \
 curl https://claimguard-backend.onrender.com/admin/seed/status
 ```
 
-> The free-tier Qdrant private service has no persistent disk, so its index
-> is wiped on every redeploy/restart of that service specifically — just
-> re-run the `curl` above afterward (it's idempotent; safe to run more than
-> once). Upgrade `claimguard-qdrant` to a paid instance type with a disk in
+> The free-tier Qdrant service has no persistent disk, so its index is wiped
+> on every redeploy/restart of that service specifically — just re-run the
+> `curl` above afterward (it's idempotent; safe to run more than once).
+> Upgrade `claimguard-qdrant` to a paid instance type with a disk in
 > `render.yaml` if you want the index to survive restarts.
 
 ## 2. Vercel — frontend
@@ -78,6 +77,6 @@ account, works within Render's free tier). If you'd prefer a managed Qdrant
 Cloud cluster instead (free 1GB tier, persists across restarts):
 
 1. Sign up at https://cloud.qdrant.io and create a cluster; copy its URL and API key.
-2. In `render.yaml`, delete the `claimguard-qdrant` private service block entirely, and change the backend's `QDRANT_URL` env var to `sync: false` instead of a hardcoded value, and add a `QDRANT_API_KEY` env var (also `sync: false`).
+2. In `render.yaml`, delete the `claimguard-qdrant` service block entirely, and change the backend's `QDRANT_URL` and `QDRANT_API_KEY` env vars to `sync: false` instead of the hardcoded/`fromService` values.
 3. After deploying, paste the Qdrant Cloud URL/key into Render's dashboard for those two variables.
 4. The `/admin/seed` endpoint works exactly the same either way — it doesn't need to know which kind of Qdrant it's talking to.
