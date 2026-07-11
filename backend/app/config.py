@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     fraud_model_path: str = str(BACKEND_ROOT / "models" / "fraud_model.json")
     fraud_model_meta_path: str = str(BACKEND_ROOT / "models" / "fraud_model_meta.json")
 
+    # Enables POST /admin/seed for one-time data bootstrap on PaaS hosts with
+    # no shell access (e.g. Render/Railway free tiers). Blank = disabled.
+    admin_seed_token: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

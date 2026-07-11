@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import routes_analytics, routes_claims, routes_escalations, ws
+from app.api import routes_admin, routes_analytics, routes_claims, routes_escalations, ws
 from app.config import get_settings
 
 settings = get_settings()
@@ -23,6 +23,7 @@ app.add_middleware(
 app.include_router(routes_claims.router)
 app.include_router(routes_escalations.router)
 app.include_router(routes_analytics.router)
+app.include_router(routes_admin.router)
 app.include_router(ws.router)
 
 

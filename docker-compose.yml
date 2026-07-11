@@ -36,7 +36,10 @@ services:
 
   backend:
     build:
-      context: ./backend
+      # Repo root, not ./backend — the Dockerfile also needs to bake in the
+      # policies/ corpus, which is a sibling of backend/, not nested under it.
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: claimguard_backend
     restart: unless-stopped
     env_file:

@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from app.db.models import Claim, Provider  # noqa: E402
+from app.db.models import AuditLog, Claim, Decision, Escalation, Provider  # noqa: E402
 from app.db.session import Base, SessionLocal, engine  # noqa: E402
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -26,6 +26,12 @@ def main() -> None:
 
     db = SessionLocal()
     try:
+        # Child tables first — Decision/Escalation/AuditLog all reference
+        # claims.claim_id, so re-running this after the pipeline has
+        # processed any claims would otherwise hit a foreign-key violation.
+        db.query(Escalation).delete()
+        db.query(Decision).delete()
+        db.query(AuditLog).delete()
         db.query(Claim).delete()
         db.query(Provider).delete()
         db.commit()
