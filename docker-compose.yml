@@ -54,6 +54,10 @@ services:
         condition: service_started
     volumes:
       - ./backend:/app
+      # The policy corpus lives at the repo root (a sibling of backend/, not
+      # nested under it), so it isn't part of the backend build context and
+      # needs its own mount. scripts/ingest_policies.py expects it at /policies.
+      - ./policies:/policies:ro
 
   frontend:
     build:

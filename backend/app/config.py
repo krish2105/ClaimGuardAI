@@ -1,6 +1,14 @@
 """Central app configuration, loaded from environment variables / .env."""
 from functools import lru_cache
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# backend/ root, however the process was launched (repo root, `cd backend`,
+# or inside the Docker container where /app *is* backend/) — computed from
+# this file's own location so it's never fragile to the caller's CWD, unlike
+# a plain relative path string would be.
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
 class Settings(BaseSettings):
@@ -17,11 +25,11 @@ class Settings(BaseSettings):
 
     qdrant_url: str = ""
     qdrant_api_key: str = ""
-    qdrant_local_path: str = "./backend/data/qdrant_local"
+    qdrant_local_path: str = str(BACKEND_ROOT / "data" / "qdrant_local")
     qdrant_collection: str = "claimguard_policies"
 
-    fraud_model_path: str = "./backend/models/fraud_model.json"
-    fraud_model_meta_path: str = "./backend/models/fraud_model_meta.json"
+    fraud_model_path: str = str(BACKEND_ROOT / "models" / "fraud_model.json")
+    fraud_model_meta_path: str = str(BACKEND_ROOT / "models" / "fraud_model_meta.json")
 
     @property
     def cors_origin_list(self) -> list[str]:
