@@ -1,0 +1,38 @@
+# Render "Blueprint" — deploys the FastAPI backend + a managed Postgres
+# database in one step. Import this repo at https://dashboard.render.com/blueprints
+# See docs/DEPLOYMENT.md for the full walkthrough (including the frontend
+# on Vercel and Qdrant Cloud for the vector store).
+databases:
+  - name: claimguard-postgres
+    plan: free
+    databaseName: claimguard
+    user: claimguard
+
+services:
+  - type: web
+    name: claimguard-backend
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: claimguard-postgres
+          property: connectionString
+      - key: QDRANT_URL
+        sync: false  # paste your Qdrant Cloud cluster URL here after signup
+      - key: QDRANT_API_KEY
+        sync: false  # paste your Qdrant Cloud API key here (leave blank for self-hosted Qdrant without auth)
+      - key: ANTHROPIC_API_KEY
+        sync: false  # optional — leave blank to run in mock mode
+      - key: CLAUDE_MODEL_REASONING
+        value: claude-sonnet-4-5
+      - key: CLAUDE_MODEL_EXTRACTION
+        value: claude-haiku-4-5
+      - key: CORS_ORIGINS
+        sync: false  # set to your Vercel frontend URL, e.g. https://claimguard-ai.vercel.app
+      - key: FRAUD_MODEL_PATH
+        value: ./backend/models/fraud_model.json
+      - key: FRAUD_MODEL_META_PATH
+        value: ./backend/models/fraud_model_meta.json

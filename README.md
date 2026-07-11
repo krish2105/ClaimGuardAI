@@ -179,5 +179,4 @@ ARCHITECTURE.md           # the original master prompt (kept verbatim per the su
 
 ## Deploying it live
 
-- **Frontend:** push to GitHub, import into [Vercel](https://vercel.com/new), set `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_WS_BASE_URL` to your deployed backend.
-- **Backend + Postgres + Qdrant:** deploy `docker-compose.yml` to [Railway](https://railway.app) or [Render](https://render.com); set `ANTHROPIC_API_KEY` there if you want live Claude calls instead of mock mode.
+For a real, public `https://` link anyone can open (not just `localhost`), see the full step-by-step walkthrough in **[`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)** — Vercel (frontend) + Render (backend + Postgres, via the `render.yaml` Blueprint in this repo) + Qdrant Cloud (vector store), all free tiers, ~15 minutes.

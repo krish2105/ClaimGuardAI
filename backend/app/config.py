@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg2://claimguard:claimguard@localhost:5432/claimguard"
 
     qdrant_url: str = ""
+    qdrant_api_key: str = ""
     qdrant_local_path: str = "./backend/data/qdrant_local"
     qdrant_collection: str = "claimguard_policies"
 
