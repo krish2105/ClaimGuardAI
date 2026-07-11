@@ -1,0 +1,4 @@
+{
+  "backend": "tfidf-svd",
+  "dim": 50
+}

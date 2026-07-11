@@ -1,0 +1,41 @@
+provider_id,specialty,claim_volume_30d_avg,flagged_history_count
+PRV-001,Emergency Medicine,107,1
+PRV-002,Cardiology,76,0
+PRV-003,General Practice,107,0
+PRV-004,Dental,91,0
+PRV-005,Obstetrics & Gynecology,92,0
+PRV-006,Orthopedics,108,1
+PRV-007,Orthopedics,6,2
+PRV-008,Endocrinology,64,0
+PRV-009,Dental,80,0
+PRV-010,Cardiology,112,0
+PRV-011,Emergency Medicine,95,0
+PRV-012,Dental,46,0
+PRV-013,Psychiatry,64,0
+PRV-014,Cardiology,66,0
+PRV-015,Oncology,66,0
+PRV-016,Dermatology,59,1
+PRV-017,General Practice,105,0
+PRV-018,General Practice,25,0
+PRV-019,Cardiology,22,3
+PRV-020,Orthopedics,57,0
+PRV-021,Orthopedics,96,0
+PRV-022,Psychiatry,75,0
+PRV-023,Oncology,12,0
+PRV-024,General Practice,82,0
+PRV-025,Psychiatry,54,0
+PRV-026,Orthopedics,6,0
+PRV-027,Dental,58,0
+PRV-028,Emergency Medicine,58,0
+PRV-029,Dental,22,2
+PRV-030,Psychiatry,18,1
+PRV-031,Dermatology,82,0
+PRV-032,Orthopedics,66,0
+PRV-033,Gastroenterology,84,1
+PRV-034,Oncology,28,0
+PRV-035,Obstetrics & Gynecology,64,0
+PRV-036,Ophthalmology,45,0
+PRV-037,General Practice,49,0
+PRV-038,Ophthalmology,75,0
+PRV-039,Ophthalmology,5,0
+PRV-040,Endocrinology,92,0

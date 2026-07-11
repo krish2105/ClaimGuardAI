@@ -1,0 +1,28 @@
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# --- Env ---
+.env
+!.env.example
+
+# --- Backend generated/local-only artifacts ---
+backend/data/qdrant_local/
+
+# --- Node / Next.js ---
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+npm-debug.log*
+frontend/screenshot_check.js
+
+# --- OS / editor ---
+.DS_Store
+*.swp
+
+# --- Alembic ---
+*.sqlite3

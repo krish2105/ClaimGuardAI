@@ -1,0 +1,37 @@
+{
+  "fraud_model": {
+    "auc_roc": 0.9382022471910113,
+    "accuracy": 0.95,
+    "precision": 0.8,
+    "recall": 0.7272727272727273,
+    "f1": 0.7619047619047619,
+    "n_train": 300,
+    "n_test": 100,
+    "fraud_rate": 0.11,
+    "trained_at": "2026-07-11T21:48:37.630273"
+  },
+  "retrieval_quality": {
+    "sample_size": 20,
+    "relevant": 3,
+    "precision_at_5_proxy": 0.15
+  },
+  "citation_accuracy": {
+    "rationales_with_citation": 402,
+    "fully_grounded": 402,
+    "citation_accuracy": 1.0
+  },
+  "pipeline_latency": {
+    "mean_ms": 11.45,
+    "p95_ms": 11.66,
+    "max_ms": 314.67,
+    "target_ms": 15000,
+    "meets_target": true
+  },
+  "escalation_rate": {
+    "total_claims": 402,
+    "auto_approved": 244,
+    "auto_denied": 64,
+    "escalated": 94,
+    "escalation_rate": 0.2338
+  }
+}
