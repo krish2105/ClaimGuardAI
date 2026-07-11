@@ -28,11 +28,11 @@ services:
       - "6434:6334"
     volumes:
       - claimguard_qdrant_data:/qdrant/storage
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:6333/healthz || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+    # No healthcheck here: the qdrant/qdrant image ships neither wget nor
+    # curl, so an HTTP-based healthcheck always fails regardless of whether
+    # Qdrant is actually up — a well-known gotcha with this image. Qdrant
+    # starts in about a second, and nothing touches it until the seeding
+    # scripts are run manually afterward, so `service_started` is enough.
 
   backend:
     build:
@@ -51,7 +51,7 @@ services:
       postgres:
         condition: service_healthy
       qdrant:
-        condition: service_healthy
+        condition: service_started
     volumes:
       - ./backend:/app
 
