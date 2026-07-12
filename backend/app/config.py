@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # no shell access (e.g. Render/Railway free tiers). Blank = disabled.
     admin_seed_token: str = ""
 
+    # Blank = error tracking disabled entirely (no-op). Set to a free
+    # Sentry.io project DSN to enable.
+    sentry_dsn: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

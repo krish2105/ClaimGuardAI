@@ -10,6 +10,15 @@ from app.rate_limit import limiter
 
 settings = get_settings()
 
+if settings.sentry_dsn:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.app_env,
+        traces_sample_rate=0.1,
+    )
+
 app = FastAPI(
     title="ClaimGuard AI",
     description="Agentic health insurance claims triage & prior-authorization RAG assistant (UAE market, synthetic data).",
@@ -40,4 +49,5 @@ def health():
     return {
         "status": "ok",
         "llm_mock_mode": settings.llm_mock_mode,
+        "error_tracking_enabled": bool(settings.sentry_dsn),
     }

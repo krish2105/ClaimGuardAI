@@ -80,6 +80,14 @@ memory, remove that env var to use the full embedding model instead.
 
 Go back to Render → `claimguard-backend` → Environment → set `CORS_ORIGINS` to your Vercel URL from step 2, and let it redeploy so the backend accepts requests from the live frontend.
 
+## 4. (Optional) Error tracking with Sentry — free tier
+
+Disabled by default (zero overhead, no-op if unset). To turn it on:
+
+1. Sign up free at https://sentry.io and create a Python/FastAPI project.
+2. Copy its DSN and paste it into Render → `claimguard-backend` → Environment → `SENTRY_DSN`.
+3. Redeploy. `GET /health` now reports `"error_tracking_enabled": true`, and any unhandled backend exception shows up in the Sentry dashboard with a full stack trace. Free tier covers 5k events/month — plenty for a demo/portfolio app.
+
 ---
 
 That's it — `https://<your-project>.vercel.app` now works for anyone, from any device, no local setup required.

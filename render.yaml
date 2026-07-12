@@ -64,3 +64,5 @@ services:
         generateValue: true  # Render generates a random secret; read it from the dashboard to call the /admin/seed/* endpoints
       - key: FORCE_TFIDF_EMBEDDINGS
         value: "true"  # skip sentence-transformers/torch (~300-500MB) entirely — too tight a fit for the 512MB free-tier instance
+      - key: SENTRY_DSN
+        sync: false  # optional — paste a free Sentry.io project DSN to enable error tracking; leave blank to disable
