@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ShieldAlert, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import Link from "next/link";
+import { ShieldCheck, ShieldAlert, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRole } from "@/lib/role-context";
+import { useAuth } from "@/lib/auth-context";
 import { runAdminSeedStep, type AdminSeedStep } from "@/lib/api";
 
 const TOKEN_STORAGE_KEY = "claimguard-admin-token";
@@ -16,13 +17,14 @@ const STEPS: { key: AdminSeedStep; label: string; description: string }[] = [
   { key: "database", label: "2. Seed Database", description: "Loads providers, claims, and reference data into Postgres." },
   { key: "policies", label: "3. Ingest Policies", description: "Embeds the policy corpus into the Qdrant index." },
   { key: "model", label: "4. Train Fraud Model", description: "Fits the XGBoost fraud scoring model on the seeded claims." },
-  { key: "batch", label: "5. Run Batch Pipeline", description: "Runs every seeded claim through the 5-agent pipeline." },
+  { key: "users", label: "5. Seed Demo Users", description: "Creates the adjuster/admin demo login accounts." },
+  { key: "batch", label: "6. Run Batch Pipeline", description: "Runs every seeded claim through the 5-agent pipeline." },
 ];
 
 type StepStatus = { state: "idle" | "running" | "done" | "error"; message?: string };
 
 export default function AdminPage() {
-  const { role } = useRole();
+  const { user, loading } = useAuth();
   const [mounted, setMounted] = React.useState(false);
   const [token, setToken] = React.useState("");
   const [statuses, setStatuses] = React.useState<Record<AdminSeedStep, StepStatus>>(
@@ -39,10 +41,15 @@ export default function AdminPage() {
     window.localStorage.setItem(TOKEN_STORAGE_KEY, value);
   }
 
+  const isAdmin = user?.role === "admin";
+
   async function runStep(step: AdminSeedStep) {
     setStatuses((s) => ({ ...s, [step]: { state: "running" } }));
     try {
-      await runAdminSeedStep(step, token);
+      // A logged-in admin's JWT is attached automatically by apiFetch; the
+      // token here only matters when nobody is logged in yet (first-ever
+      // bootstrap of a fresh deployment, before any user account exists).
+      await runAdminSeedStep(step, isAdmin ? undefined : token);
       setStatuses((s) => ({ ...s, [step]: { state: "done" } }));
     } catch (err) {
       setStatuses((s) => ({
@@ -52,21 +59,7 @@ export default function AdminPage() {
     }
   }
 
-  if (!mounted) return null;
-
-  if (role !== "admin") {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-center">
-        <ShieldAlert className="h-8 w-8 text-muted-foreground" />
-        <div>
-          <h1 className="text-lg font-semibold">Admin Panel</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Switch &ldquo;Viewing as&rdquo; to Admin in the top nav to access data bootstrap tools.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (!mounted || loading) return null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,32 +72,48 @@ export default function AdminPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Admin Token</CardTitle>
-          <CardDescription>
-            Matches <code className="rounded bg-muted px-1 py-0.5 text-xs">ADMIN_SEED_TOKEN</code> on the backend.
-            Stored only in this browser&apos;s local storage.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-1.5 sm:max-w-sm">
-            <Label htmlFor="admin-token">X-Admin-Token</Label>
-            <Input
-              id="admin-token"
-              type="password"
-              value={token}
-              onChange={(e) => updateToken(e.target.value)}
-              placeholder="Paste your admin seed token"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {isAdmin ? (
+        <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+          <ShieldCheck className="h-4 w-4 shrink-0" />
+          Authenticated as <span className="font-medium">{user.username}</span> (admin) — no token needed below.
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+          <ShieldAlert className="h-4 w-4 shrink-0" />
+          Not logged in as admin.{" "}
+          <Link href="/login" className="font-medium underline underline-offset-2">Log in</Link>, or paste the
+          bootstrap token below (needed the first time, before any admin account exists).
+        </div>
+      )}
+
+      {!isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Admin Token</CardTitle>
+            <CardDescription>
+              Matches <code className="rounded bg-muted px-1 py-0.5 text-xs">ADMIN_SEED_TOKEN</code> on the backend.
+              Stored only in this browser&apos;s local storage.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-1.5 sm:max-w-sm">
+              <Label htmlFor="admin-token">X-Admin-Token</Label>
+              <Input
+                id="admin-token"
+                type="password"
+                value={token}
+                onChange={(e) => updateToken(e.target.value)}
+                placeholder="Paste your admin seed token"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
           <CardTitle>Bootstrap Steps</CardTitle>
-          <CardDescription>Disabled on the backend (fails closed) unless a token is configured.</CardDescription>
+          <CardDescription>Disabled on the backend (fails closed) unless you&apos;re an authenticated admin or supply the token.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {STEPS.map((step) => {
@@ -127,7 +136,7 @@ export default function AdminPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={!token || status.state === "running"}
+                    disabled={(!isAdmin && !token) || status.state === "running"}
                     onClick={() => runStep(step.key)}
                   >
                     {status.state === "running" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}

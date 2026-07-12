@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlertTriangle, Check, X } from "lucide-react";
+import { AlertTriangle, Check, X, LogIn } from "lucide-react";
 import { listEscalations, resolveEscalation } from "@/lib/api";
 import type { EscalationItem } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,9 +12,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FraudScoreMeter } from "@/components/fraud-score-meter";
 import { ErrorState } from "@/components/error-state";
+import { useAuth } from "@/lib/auth-context";
 import { formatAED, formatDateTime } from "@/lib/utils";
 
 function EscalationCard({ item, onResolved }: { item: EscalationItem; onResolved: () => void }) {
+  const { user } = useAuth();
+  const canResolve = user?.role === "adjuster" || user?.role === "admin";
   const [notes, setNotes] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -57,29 +60,38 @@ function EscalationCard({ item, onResolved }: { item: EscalationItem; onResolved
         )}
 
         {item.status === "pending" ? (
-          <div className="flex flex-col gap-2">
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Textarea
-                placeholder="Adjuster notes (optional)"
-                className="sm:flex-1"
-                rows={1}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" disabled={busy} onClick={() => resolve("approve")}>
-                  <Check className="mr-1 h-3.5 w-3.5" /> Approve
-                </Button>
-                <Button size="sm" variant="destructive" disabled={busy} onClick={() => resolve("deny")}>
-                  <X className="mr-1 h-3.5 w-3.5" /> Deny
-                </Button>
+          canResolve ? (
+            <div className="flex flex-col gap-2">
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Textarea
+                  placeholder="Adjuster notes (optional)"
+                  className="sm:flex-1"
+                  rows={1}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => resolve("approve")}>
+                    <Check className="mr-1 h-3.5 w-3.5" /> Approve
+                  </Button>
+                  <Button size="sm" variant="destructive" disabled={busy} onClick={() => resolve("deny")}>
+                    <X className="mr-1 h-3.5 w-3.5" /> Deny
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+              <Link href="/login" className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+                <LogIn className="h-3.5 w-3.5" /> Log in
+              </Link>
+              as an adjuster or admin to approve or deny this claim.
+            </div>
+          )
         ) : (
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Resolved:</span>
+            <span className="text-muted-foreground">Resolved{item.resolved_by ? ` by ${item.resolved_by}` : ""}:</span>
             <Badge variant={item.adjuster_decision === "approve" ? "success" : "destructive"}>
               {item.adjuster_decision}
             </Badge>

@@ -28,7 +28,7 @@ single `curl` command, no shell access to the host required.
    - `ADMIN_SEED_TOKEN` is generated automatically by Render (`generateValue: true`) — you don't need to set it, just go find the value Render generated: `claimguard-backend` → **Environment** tab, after the first deploy.
 4. Deploy (first build takes a few minutes — it's building the Docker image and downloading dependencies). Once live, note the backend's URL, e.g. `https://claimguard-backend.onrender.com`.
 
-### Load the data (five HTTP calls, no shell needed)
+### Load the data (six HTTP calls, no shell needed)
 
 Render's free tier gives you no interactive shell, so instead of running
 scripts against a remote database from your laptop, this repo exposes
@@ -51,17 +51,31 @@ curl -X POST "$BASE/admin/seed/dataset"  -H "X-Admin-Token: $TOKEN"
 curl -X POST "$BASE/admin/seed/database" -H "X-Admin-Token: $TOKEN"
 curl -X POST "$BASE/admin/seed/policies" -H "X-Admin-Token: $TOKEN"
 curl -X POST "$BASE/admin/seed/model"    -H "X-Admin-Token: $TOKEN"
+curl -X POST "$BASE/admin/seed/users"    -H "X-Admin-Token: $TOKEN"
 curl -X POST "$BASE/admin/seed/batch"    -H "X-Admin-Token: $TOKEN"
 ```
 
-All five are safe to re-run individually if one fails (each is idempotent).
+All six are safe to re-run individually if one fails (each is idempotent).
+`users` creates the two demo login accounts (see **Logging in** below) —
+skip it only if you've already customized real accounts and don't want the
+demo ones re-checked (it won't overwrite an existing username either way).
 
 > **Prefer clicking over curl?** Once the frontend is deployed (step 2 below),
-> open it, switch **"Viewing as"** to **Admin** in the top nav, and go to the
-> new **Admin Panel** page — it runs these same five steps with buttons and
-> shows a clear success/error per step. The token box only lives in your own
-> browser's local storage. This role switcher is a UI convenience, not real
-> auth — the backend's `ADMIN_SEED_TOKEN` check is what actually gates it.
+> open it and go to `/admin` — it runs these same six steps with buttons and
+> shows a clear success/error per step. Before any user account exists you'll
+> authenticate with the token above (pasted into the page, stored only in
+> your own browser's local storage); once the `users` step has run, logging
+> in as `admin` is sufficient on its own and the token is no longer needed.
+
+> **Upgrading an already-seeded deployment?** `seed_database`/`seed_users`
+> only *add* rows — they don't alter existing table structure. If your
+> Postgres was seeded before this auth feature existed, the `escalations`
+> table is missing its new `resolved_by` column and the `users` table
+> doesn't exist yet. Since this is a demo on synthetic/disposable data, the
+> simplest fix is deleting `claimguard-postgres` on Render and re-running
+> the Blueprint to recreate it fresh, then redoing all six steps above. To
+> keep existing data instead, connect a Postgres client to the database and
+> run `ALTER TABLE escalations ADD COLUMN resolved_by VARCHAR(50);` first.
 
 `render.yaml` also sets `FORCE_TFIDF_EMBEDDINGS=true` on the backend, which
 skips loading `sentence-transformers`/`torch` (a ~300-500MB memory cost)
@@ -88,7 +102,24 @@ memory, remove that env var to use the full embedding model instead.
 
 Go back to Render → `claimguard-backend` → Environment → set `CORS_ORIGINS` to your Vercel URL from step 2, and let it redeploy so the backend accepts requests from the live frontend.
 
-## 4. (Optional) Error tracking with Sentry — free tier
+## 4. Logging in
+
+Resolving an escalation and using the Admin Panel both require a real,
+backend-enforced login (bcrypt-hashed passwords + a signed JWT — see
+`app/auth.py`) — there's no client-side-only role toggle. Once
+`/admin/seed/users` has run, sign in at `/login` with either demo account
+(shown on the login page itself, since this is a portfolio demo on
+synthetic data with nothing sensitive at stake):
+
+| Username | Password | Role |
+|---|---|---|
+| `adjuster` | `adjuster123` | Adjuster — can resolve escalations |
+| `admin` | `admin123` | Admin — adjuster permissions + the Admin Panel |
+
+Change these (or add real accounts) directly in Postgres, or extend
+`scripts/seed_users.py` for a real deployment.
+
+## 5. (Optional) Error tracking with Sentry — free tier
 
 Disabled by default (zero overhead, no-op if unset). To turn it on:
 

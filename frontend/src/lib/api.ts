@@ -13,12 +13,22 @@ export const API_BASE_URL =
 export const WS_BASE_URL =
   process.env.NEXT_PUBLIC_WS_BASE_URL || "ws://localhost:8000";
 
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...init?.headers },
+      headers: {
+        "Content-Type": "application/json",
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...init?.headers,
+      },
       cache: "no-store",
     });
   } catch {
@@ -35,6 +45,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     }
     if (res.status === 429) {
       throw new Error("Too many requests — please wait a moment and try again.");
+    }
+    if (res.status === 401) {
+      throw new Error(detail || "Not authenticated — please log in.");
     }
     throw new Error(detail || `Request failed (${res.status}).`);
   }
@@ -88,11 +101,25 @@ export function getFraudTrends(): Promise<FraudTrendsResponse> {
   return apiFetch(`/analytics/fraud-trends`);
 }
 
-export type AdminSeedStep = "dataset" | "database" | "policies" | "model" | "batch";
+export type AdminSeedStep = "dataset" | "database" | "policies" | "model" | "users" | "batch";
 
-export function runAdminSeedStep(step: AdminSeedStep, token: string): Promise<{ status: string; step: string }> {
+export function runAdminSeedStep(step: AdminSeedStep, token?: string): Promise<{ status: string; step: string }> {
   return apiFetch(`/admin/seed/${step}`, {
     method: "POST",
-    headers: { "X-Admin-Token": token },
+    headers: token ? { "X-Admin-Token": token } : {},
   });
+}
+
+export type LoginResponse = { access_token: string; token_type: string; username: string; role: "adjuster" | "admin" };
+export type MeResponse = { username: string; role: "adjuster" | "admin" };
+
+export function login(username: string, password: string): Promise<LoginResponse> {
+  return apiFetch(`/auth/login`, {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function getMe(): Promise<MeResponse> {
+  return apiFetch(`/auth/me`);
 }

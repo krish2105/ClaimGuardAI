@@ -35,8 +35,9 @@ os.environ.setdefault("TFIDF_EMBEDDER_PATH", str(_TEST_STATE_DIR / "tfidf_embedd
 
 import pytest  # noqa: E402
 
+from app.auth import hash_password  # noqa: E402
 from app.config import get_settings  # noqa: E402
-from app.db.models import Claim, Provider  # noqa: E402
+from app.db.models import Claim, Provider, User  # noqa: E402
 from app.db.session import Base, SessionLocal, engine  # noqa: E402
 
 
@@ -83,3 +84,19 @@ def sample_provider(clean_db):
 @pytest.fixture()
 def settings():
     return get_settings()
+
+
+@pytest.fixture()
+def demo_users(clean_db):
+    """A known adjuster + admin account with plaintext passwords available
+    for login-flow tests, and their ORM rows for tests that just need a
+    logged-in-as identity without going through /auth/login."""
+    creds = {
+        "adjuster": {"username": "test-adjuster", "password": "adjuster-pass"},
+        "admin": {"username": "test-admin", "password": "admin-pass"},
+    }
+    for role, cred in creds.items():
+        user = User(username=cred["username"], password_hash=hash_password(cred["password"]), role=role)
+        clean_db.add(user)
+    clean_db.commit()
+    return creds

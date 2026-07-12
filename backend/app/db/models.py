@@ -78,10 +78,21 @@ class Escalation(Base):
     status = Column(String(20), default="pending")  # pending | resolved
     adjuster_decision = Column(String(20))
     adjuster_notes = Column(Text)
+    resolved_by = Column(String(50))  # username of the adjuster/admin who resolved it
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     resolved_at = Column(DateTime(timezone=True))
 
     claim = relationship("Claim", back_populates="escalations")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    password_hash = Column(String(100), nullable=False)
+    role = Column(String(20), nullable=False)  # "adjuster" | "admin"
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class AuditLog(Base):

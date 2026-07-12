@@ -69,6 +69,7 @@ export interface EscalationItem {
   status: "pending" | "resolved";
   adjuster_decision: "approve" | "deny" | null;
   adjuster_notes: string | null;
+  resolved_by: string | null;
   created_at: string | null;
   resolved_at: string | null;
   fraud_score: number | null;

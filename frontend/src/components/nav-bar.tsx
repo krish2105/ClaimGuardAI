@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShieldCheck, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { RoleSwitcher } from "@/components/role-switcher";
-import { useRole } from "@/lib/role-context";
+import { UserMenu } from "@/components/user-menu";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 const BASE_NAV_ITEMS = [
@@ -19,9 +19,9 @@ const BASE_NAV_ITEMS = [
 export function NavBar() {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
-  const { role } = useRole();
+  const { user } = useAuth();
 
-  const navItems = role === "admin"
+  const navItems = user?.role === "admin"
     ? [...BASE_NAV_ITEMS, { href: "/admin", label: "Admin Panel" }]
     : BASE_NAV_ITEMS;
 
@@ -49,7 +49,7 @@ export function NavBar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <RoleSwitcher />
+          <UserMenu />
           <ThemeToggle />
           <button
             className="rounded-md p-2 hover:bg-accent md:hidden"

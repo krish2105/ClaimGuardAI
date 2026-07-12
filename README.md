@@ -159,14 +159,14 @@ backend/
     reference_data.py    # synthetic ICD-10/CPT reference tables + cost bands
     embeddings.py         # sentence-transformers w/ TF-IDF offline fallback
     vectorstore.py        # Qdrant client (embedded or server)
-  scripts/              # generate_dataset, seed_db, ingest_policies, train_fraud_model,
+  scripts/              # generate_dataset, seed_db, seed_users, ingest_policies, train_fraud_model,
                           # run_pipeline_batch, eval_harness, smoke_test_pipeline
   alembic/               # DB migrations
   models/                # trained fraud_model.json + metadata (gitignored — see below)
   data/                  # generated claims.csv / providers.csv (gitignored — see below)
 policies/                # 13 synthetic UAE-style policy documents (the RAG corpus)
 frontend/
-  src/app/               # queue, claims/[claimId], submit, escalations, analytics, admin
+  src/app/               # queue, claims/[claimId], submit, escalations, analytics, admin, login
   src/components/        # shadcn-style UI primitives + domain components (trace timeline, etc.)
 docs/                    # ClaimGuard_AI_Overview.docx — plain-English project explainer
 docker-compose.yml

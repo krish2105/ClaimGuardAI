@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     # Sentry.io project DSN to enable.
     sentry_dsn: str = ""
 
+    # Signs/verifies login JWTs. Must be set to a real secret in any
+    # deployed environment — a blank default only works because mock/dev
+    # runs don't care about token forgery, but render.yaml generates a
+    # real random value for production.
+    jwt_secret_key: str = "dev-only-insecure-secret-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_expires_minutes: int = 60 * 24
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

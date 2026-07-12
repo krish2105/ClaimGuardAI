@@ -4,7 +4,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api import routes_admin, routes_analytics, routes_claims, routes_escalations, ws
+from app.api import routes_admin, routes_analytics, routes_auth, routes_claims, routes_escalations, ws
 from app.config import get_settings
 from app.rate_limit import limiter
 
@@ -37,6 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(routes_auth.router)
 app.include_router(routes_claims.router)
 app.include_router(routes_escalations.router)
 app.include_router(routes_analytics.router)

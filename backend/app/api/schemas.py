@@ -74,6 +74,7 @@ class EscalationItem(BaseModel):
     status: str
     adjuster_decision: Optional[str] = None
     adjuster_notes: Optional[str] = None
+    resolved_by: Optional[str] = None
     created_at: Optional[datetime] = None
     resolved_at: Optional[datetime] = None
     fraud_score: Optional[float] = None

@@ -5,7 +5,8 @@ from sqlalchemy import desc, func
 from sqlalchemy.orm import Session, aliased
 
 from app.api.schemas import EscalationItem, EscalationResolveRequest
-from app.db.models import Claim, Decision, Escalation
+from app.auth import require_role
+from app.db.models import Claim, Decision, Escalation, User
 from app.db.session import get_db
 from app.rate_limit import limiter
 
@@ -43,6 +44,7 @@ def list_escalations(status: str = "pending", db: Session = Depends(get_db)):
             status=escalation.status,
             adjuster_decision=escalation.adjuster_decision,
             adjuster_notes=escalation.adjuster_notes,
+            resolved_by=escalation.resolved_by,
             created_at=escalation.created_at,
             resolved_at=escalation.resolved_at,
             fraud_score=float(decision.fraud_score) if decision and decision.fraud_score is not None else None,
@@ -56,7 +58,11 @@ def list_escalations(status: str = "pending", db: Session = Depends(get_db)):
 @router.post("/escalations/{escalation_id}/resolve", response_model=EscalationItem)
 @limiter.limit("30/minute")
 def resolve_escalation(
-    request: Request, escalation_id: int, payload: EscalationResolveRequest, db: Session = Depends(get_db)
+    request: Request,
+    escalation_id: int,
+    payload: EscalationResolveRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("adjuster", "admin")),
 ):
     escalation = db.get(Escalation, escalation_id)
     if not escalation:
@@ -65,6 +71,7 @@ def resolve_escalation(
     escalation.status = "resolved"
     escalation.adjuster_decision = payload.adjuster_decision
     escalation.adjuster_notes = payload.adjuster_notes
+    escalation.resolved_by = user.username
     escalation.resolved_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(escalation)
@@ -83,6 +90,7 @@ def resolve_escalation(
         status=escalation.status,
         adjuster_decision=escalation.adjuster_decision,
         adjuster_notes=escalation.adjuster_notes,
+        resolved_by=escalation.resolved_by,
         created_at=escalation.created_at,
         resolved_at=escalation.resolved_at,
         fraud_score=float(decision.fraud_score) if decision and decision.fraud_score is not None else None,
