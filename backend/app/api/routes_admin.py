@@ -18,9 +18,10 @@ step doesn't lose track of the ones before it:
 
 Run them in that order; each is safe to retry on its own if it fails.
 """
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.config import get_settings
+from app.rate_limit import limiter
 
 router = APIRouter(tags=["admin"])
 
@@ -40,7 +41,8 @@ def _run(step_name: str, fn) -> dict:
 
 
 @router.post("/admin/seed/dataset")
-async def seed_dataset(x_admin_token: str = Header(default="")):
+@limiter.limit("5/minute")
+async def seed_dataset(request: Request, x_admin_token: str = Header(default="")):
     _check_token(x_admin_token)
     from scripts import generate_dataset
 
@@ -48,7 +50,8 @@ async def seed_dataset(x_admin_token: str = Header(default="")):
 
 
 @router.post("/admin/seed/database")
-async def seed_database(x_admin_token: str = Header(default="")):
+@limiter.limit("5/minute")
+async def seed_database(request: Request, x_admin_token: str = Header(default="")):
     _check_token(x_admin_token)
     from scripts import seed_db
 
@@ -56,7 +59,8 @@ async def seed_database(x_admin_token: str = Header(default="")):
 
 
 @router.post("/admin/seed/policies")
-async def seed_policies(x_admin_token: str = Header(default="")):
+@limiter.limit("5/minute")
+async def seed_policies(request: Request, x_admin_token: str = Header(default="")):
     _check_token(x_admin_token)
     from scripts import ingest_policies
 
@@ -64,7 +68,8 @@ async def seed_policies(x_admin_token: str = Header(default="")):
 
 
 @router.post("/admin/seed/model")
-async def seed_model(x_admin_token: str = Header(default="")):
+@limiter.limit("5/minute")
+async def seed_model(request: Request, x_admin_token: str = Header(default="")):
     _check_token(x_admin_token)
     from scripts import train_fraud_model
 
@@ -72,7 +77,8 @@ async def seed_model(x_admin_token: str = Header(default="")):
 
 
 @router.post("/admin/seed/batch")
-async def seed_batch(x_admin_token: str = Header(default="")):
+@limiter.limit("5/minute")
+async def seed_batch(request: Request, x_admin_token: str = Header(default="")):
     _check_token(x_admin_token)
     from scripts import run_pipeline_batch
 

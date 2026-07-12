@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session, aliased
 
 from app.api.schemas import EscalationItem, EscalationResolveRequest
 from app.db.models import Claim, Decision, Escalation
 from app.db.session import get_db
+from app.rate_limit import limiter
 
 router = APIRouter(tags=["escalations"])
 
@@ -53,7 +54,10 @@ def list_escalations(status: str = "pending", db: Session = Depends(get_db)):
 
 
 @router.post("/escalations/{escalation_id}/resolve", response_model=EscalationItem)
-def resolve_escalation(escalation_id: int, payload: EscalationResolveRequest, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def resolve_escalation(
+    request: Request, escalation_id: int, payload: EscalationResolveRequest, db: Session = Depends(get_db)
+):
     escalation = db.get(Escalation, escalation_id)
     if not escalation:
         raise HTTPException(404, f"Escalation {escalation_id} not found")

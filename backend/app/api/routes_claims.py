@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session, aliased
 
@@ -16,6 +16,7 @@ from app.api.schemas import (
 )
 from app.db.models import Claim, Decision
 from app.db.session import get_db
+from app.rate_limit import limiter
 from app.services.document_generator import render_claim_document
 from app.services.pipeline_stream import run_and_broadcast
 
@@ -36,7 +37,8 @@ def _latest_decision(db: Session, claim_id: str) -> Decision | None:
 
 
 @router.post("/claims/submit", response_model=ClaimSubmitResponse)
-async def submit_claim(payload: ClaimSubmitRequest, background_tasks: BackgroundTasks):
+@limiter.limit("10/minute")
+async def submit_claim(request: Request, payload: ClaimSubmitRequest, background_tasks: BackgroundTasks):
     claim_id = _new_claim_id()
 
     if payload.raw_document_text:
