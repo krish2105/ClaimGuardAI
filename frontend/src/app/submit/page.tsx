@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TraceTimeline } from "@/components/trace-timeline";
 import { DecisionBadge } from "@/components/status-badge";
+import { ErrorState } from "@/components/error-state";
 import { submitClaim, WS_BASE_URL } from "@/lib/api";
 import type { PlanType, StreamMessage, TraceStep, FinalDecision } from "@/lib/types";
 
@@ -48,6 +49,7 @@ export default function SubmitPage() {
   const [steps, setSteps] = React.useState<TraceStep[]>([]);
   const [liveAgent, setLiveAgent] = React.useState<string | null>(null);
   const [finalDecision, setFinalDecision] = React.useState<FinalDecision | null>(null);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
   const wsRef = React.useRef<WebSocket | null>(null);
 
   const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -67,6 +69,7 @@ export default function SubmitPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
+    setSubmitError(null);
     setSteps([]);
     setFinalDecision(null);
     setLiveAgent("intake");
@@ -102,9 +105,13 @@ export default function SubmitPage() {
           ws.close();
         }
       };
-      ws.onerror = () => setSubmitting(false);
+      ws.onerror = () => {
+        setSubmitError("Lost connection to the live agent trace. The claim may still be processing — check the queue in a moment.");
+        setSubmitting(false);
+        setLiveAgent(null);
+      };
     } catch (err) {
-      console.error(err);
+      setSubmitError(err instanceof Error ? err.message : "Failed to submit the claim. Please try again.");
       setSubmitting(false);
       setLiveAgent(null);
     }
@@ -201,12 +208,18 @@ export default function SubmitPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {steps.length === 0 && !submitting && (
+            {submitError && (
+              <ErrorState
+                message={submitError}
+                onRetry={() => setSubmitError(null)}
+              />
+            )}
+            {!submitError && steps.length === 0 && !submitting && (
               <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
                 No claim submitted yet.
               </div>
             )}
-            {(steps.length > 0 || submitting) && <TraceTimeline steps={steps} liveAgent={liveAgent} />}
+            {!submitError && (steps.length > 0 || submitting) && <TraceTimeline steps={steps} liveAgent={liveAgent} />}
             {finalDecision && claimId && (
               <div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-muted/40 p-4">
                 <div className="flex items-center gap-2 text-sm">

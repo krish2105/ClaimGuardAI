@@ -14,14 +14,29 @@ export const WS_BASE_URL =
   process.env.NEXT_PUBLIC_WS_BASE_URL || "ws://localhost:8000";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...init?.headers },
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error("Could not reach the ClaimGuard AI server. Check your connection and try again.");
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`API ${path} failed: ${res.status} ${body}`);
+    let detail = body;
+    try {
+      const parsed = JSON.parse(body);
+      if (typeof parsed?.detail === "string") detail = parsed.detail;
+    } catch {
+      // not JSON — fall back to the raw body text
+    }
+    if (res.status === 429) {
+      throw new Error("Too many requests — please wait a moment and try again.");
+    }
+    throw new Error(detail || `Request failed (${res.status}).`);
   }
   return res.json();
 }

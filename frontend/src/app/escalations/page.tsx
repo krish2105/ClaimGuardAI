@@ -11,17 +11,22 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FraudScoreMeter } from "@/components/fraud-score-meter";
+import { ErrorState } from "@/components/error-state";
 import { formatAED, formatDateTime } from "@/lib/utils";
 
 function EscalationCard({ item, onResolved }: { item: EscalationItem; onResolved: () => void }) {
   const [notes, setNotes] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   async function resolve(decision: "approve" | "deny") {
     setBusy(true);
+    setError(null);
     try {
       await resolveEscalation(item.escalation_id, { adjuster_decision: decision, adjuster_notes: notes || undefined });
       onResolved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resolve this escalation. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -52,21 +57,24 @@ function EscalationCard({ item, onResolved }: { item: EscalationItem; onResolved
         )}
 
         {item.status === "pending" ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Textarea
-              placeholder="Adjuster notes (optional)"
-              className="sm:flex-1"
-              rows={1}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => resolve("approve")}>
-                <Check className="mr-1 h-3.5 w-3.5" /> Approve
-              </Button>
-              <Button size="sm" variant="destructive" disabled={busy} onClick={() => resolve("deny")}>
-                <X className="mr-1 h-3.5 w-3.5" /> Deny
-              </Button>
+          <div className="flex flex-col gap-2">
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Textarea
+                placeholder="Adjuster notes (optional)"
+                className="sm:flex-1"
+                rows={1}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => resolve("approve")}>
+                  <Check className="mr-1 h-3.5 w-3.5" /> Approve
+                </Button>
+                <Button size="sm" variant="destructive" disabled={busy} onClick={() => resolve("deny")}>
+                  <X className="mr-1 h-3.5 w-3.5" /> Deny
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
@@ -87,10 +95,15 @@ export default function EscalationsPage() {
   const [tab, setTab] = React.useState<"pending" | "resolved">("pending");
   const [items, setItems] = React.useState<EscalationItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const load = React.useCallback((status: string) => {
     setLoading(true);
-    listEscalations(status).then(setItems).finally(() => setLoading(false));
+    setError(null);
+    listEscalations(status)
+      .then(setItems)
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load escalations."))
+      .finally(() => setLoading(false));
   }, []);
 
   React.useEffect(() => load(tab), [tab, load]);
@@ -111,16 +124,19 @@ export default function EscalationsPage() {
         </TabsList>
         <TabsContent value={tab}>
           {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
-          {!loading && items.length === 0 && (
+          {!loading && error && <ErrorState message={error} onRetry={() => load(tab)} />}
+          {!loading && !error && items.length === 0 && (
             <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
               No {tab} escalations.
             </CardContent></Card>
           )}
-          <div className="flex flex-col gap-4">
-            {items.map((item) => (
-              <EscalationCard key={item.escalation_id} item={item} onResolved={() => load(tab)} />
-            ))}
-          </div>
+          {!loading && !error && (
+            <div className="flex flex-col gap-4">
+              {items.map((item) => (
+                <EscalationCard key={item.escalation_id} item={item} onResolved={() => load(tab)} />
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

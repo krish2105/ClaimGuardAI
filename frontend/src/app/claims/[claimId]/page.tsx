@@ -14,6 +14,7 @@ import { DecisionBadge, RecommendationBadge } from "@/components/status-badge";
 import { FraudScoreMeter } from "@/components/fraud-score-meter";
 import { ClauseCard } from "@/components/clause-card";
 import { TraceTimeline } from "@/components/trace-timeline";
+import { ErrorState } from "@/components/error-state";
 import { formatAED, formatDate, formatDateTime } from "@/lib/utils";
 import type { TraceStep } from "@/lib/types";
 
@@ -34,21 +35,25 @@ export default function ClaimDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setError(null);
     Promise.all([getClaim(params.claimId), getDecisionTrace(params.claimId)])
       .then(([claimRes, traceRes]) => {
         setClaim(claimRes);
         setTrace(traceRes.agent_trace);
       })
-      .catch((e) => setError(String(e)))
+      .catch((e) => setError(e instanceof Error ? e.message : "Claim not found."))
       .finally(() => setLoading(false));
   }, [params.claimId]);
+
+  React.useEffect(() => load(), [load]);
 
   if (loading) return <p className="text-sm text-muted-foreground">Loading claim…</p>;
   if (error || !claim) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-destructive">{error ?? "Claim not found."}</p>
+        <ErrorState message={error ?? "Claim not found."} onRetry={load} />
         <Button variant="outline" className="w-fit" onClick={() => router.push("/queue")}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Back to queue
         </Button>

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { DecisionBadge, RecommendationBadge } from "@/components/status-badge";
 import { FraudScoreMeter } from "@/components/fraud-score-meter";
+import { ErrorState } from "@/components/error-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -111,7 +112,7 @@ export default function QueuePage() {
           </div>
         </CardHeader>
         <CardContent>
-          {error && <p className="py-6 text-center text-sm text-destructive">{error}</p>}
+          {error && <ErrorState message={error} onRetry={load} />}
           {!error && loading && <p className="py-6 text-center text-sm text-muted-foreground">Loading claims…</p>}
           {!error && !loading && (
             <Table>

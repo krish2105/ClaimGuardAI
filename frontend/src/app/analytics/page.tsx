@@ -8,6 +8,7 @@ import {
 import { getFraudTrends } from "@/lib/api";
 import type { FraudTrendsResponse } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ErrorState } from "@/components/error-state";
 import { STATUS_COLORS, CATEGORICAL, SEQUENTIAL_BLUE, CHART_CHROME } from "@/lib/chart-colors";
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -32,13 +33,37 @@ export default function AnalyticsPage() {
 
   const [data, setData] = React.useState<FraudTrendsResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    getFraudTrends().then(setData).finally(() => setLoading(false));
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setError(null);
+    getFraudTrends()
+      .then(setData)
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load analytics."))
+      .finally(() => setLoading(false));
   }, []);
 
+  React.useEffect(() => load(), [load]);
+
   if (loading) return <p className="text-sm text-muted-foreground">Loading analytics…</p>;
-  if (!data) return <p className="text-sm text-destructive">Failed to load analytics.</p>;
+  if (error || !data) return <ErrorState message={error ?? "Failed to load analytics."} onRetry={load} />;
+
+  if (data.total_claims_processed === 0) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+        </div>
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            No claims processed yet. Submit a claim from the{" "}
+            <a href="/submit" className="font-medium text-primary hover:underline">Submit</a> page to see trends here.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const planData = Object.entries(data.plan_type_breakdown).map(([plan, count]) => ({ plan, count }));
   const codingData = data.coding_flag_frequency.map((f) => ({ flag: f.flag.replaceAll("_", " "), count: f.count }));
