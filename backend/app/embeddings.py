@@ -20,8 +20,11 @@ from pathlib import Path
 import joblib
 import numpy as np
 
-CONFIG_PATH = Path(__file__).resolve().parents[1] / "models" / "embedding_config.json"
-TFIDF_PATH = Path(__file__).resolve().parents[1] / "models" / "tfidf_embedder.joblib"
+_MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
+# Overridable so tests can fit/save a throwaway embedder without clobbering
+# the real dev/prod model artifacts checked into backend/models/.
+CONFIG_PATH = Path(os.getenv("EMBEDDING_CONFIG_PATH", str(_MODELS_DIR / "embedding_config.json")))
+TFIDF_PATH = Path(os.getenv("TFIDF_EMBEDDER_PATH", str(_MODELS_DIR / "tfidf_embedder.joblib")))
 EMBED_DIM_TFIDF = 256
 
 # Hard override to skip sentence-transformers/torch entirely (~300-500MB just

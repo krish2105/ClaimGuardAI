@@ -11,6 +11,7 @@ venv/
 
 # --- Backend generated/local-only artifacts ---
 backend/data/qdrant_local/
+.pytest_cache/
 
 # --- Node / Next.js ---
 node_modules/

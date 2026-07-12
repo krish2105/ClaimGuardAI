@@ -2,7 +2,7 @@
 resulting decision + audit trail to Postgres."""
 from app.agents.graph import claim_pipeline
 from app.agents.state import ClaimState
-from app.db.models import AuditLog, Claim, Decision, Escalation
+from app.db.models import AuditLog, Claim, Decision, Escalation, Provider
 from app.db.session import SessionLocal
 
 
@@ -14,12 +14,29 @@ def run_pipeline(claim_id: str, raw_document_text: str) -> ClaimState:
     return state
 
 
+def _upsert_provider(db, state: ClaimState) -> None:
+    """A live claim submission can name a provider_id that was never
+    seeded (e.g. a genuinely new provider). claims.provider_id has a FK
+    to providers, so insert a minimal placeholder row rather than crash
+    the whole pipeline persistence step over a missing lookup row."""
+    if not state.provider_id or db.get(Provider, state.provider_id) is not None:
+        return
+    db.add(Provider(
+        provider_id=state.provider_id,
+        specialty=None,
+        claim_volume_30d_avg=0,
+        flagged_history_count=0,
+    ))
+    db.flush()
+
+
 def _upsert_claim(db, state: ClaimState) -> None:
     """Live claim submissions (unlike the CSV-seeded ones) have no row in
     `claims` yet — create one from the Intake Agent's extracted fields so
     the Decision/Escalation foreign keys resolve."""
     if db.get(Claim, state.claim_id) is not None:
         return
+    _upsert_provider(db, state)
     db.add(Claim(
         claim_id=state.claim_id,
         # patient_id is NOT NULL; fall back to a placeholder when Intake
