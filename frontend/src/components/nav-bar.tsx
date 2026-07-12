@@ -5,9 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShieldCheck, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { RoleSwitcher } from "@/components/role-switcher";
+import { useRole } from "@/lib/role-context";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { href: "/queue", label: "Claims Queue" },
   { href: "/submit", label: "Submit Claim" },
   { href: "/escalations", label: "Escalations" },
@@ -17,6 +19,11 @@ const NAV_ITEMS = [
 export function NavBar() {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
+  const { role } = useRole();
+
+  const navItems = role === "admin"
+    ? [...BASE_NAV_ITEMS, { href: "/admin", label: "Admin Panel" }]
+    : BASE_NAV_ITEMS;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
@@ -27,7 +34,7 @@ export function NavBar() {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -41,7 +48,8 @@ export function NavBar() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <RoleSwitcher />
           <ThemeToggle />
           <button
             className="rounded-md p-2 hover:bg-accent md:hidden"
@@ -56,7 +64,7 @@ export function NavBar() {
       {open && (
         <nav className="border-t border-border md:hidden">
           <div className="container flex flex-col gap-1 py-2">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

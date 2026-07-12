@@ -55,6 +55,14 @@ curl -X POST "$BASE/admin/seed/batch"    -H "X-Admin-Token: $TOKEN"
 ```
 
 All five are safe to re-run individually if one fails (each is idempotent).
+
+> **Prefer clicking over curl?** Once the frontend is deployed (step 2 below),
+> open it, switch **"Viewing as"** to **Admin** in the top nav, and go to the
+> new **Admin Panel** page — it runs these same five steps with buttons and
+> shows a clear success/error per step. The token box only lives in your own
+> browser's local storage. This role switcher is a UI convenience, not real
+> auth — the backend's `ADMIN_SEED_TOKEN` check is what actually gates it.
+
 `render.yaml` also sets `FORCE_TFIDF_EMBEDDINGS=true` on the backend, which
 skips loading `sentence-transformers`/`torch` (a ~300-500MB memory cost)
 entirely in favor of the lightweight TF-IDF fallback embedder — the safer

@@ -87,3 +87,12 @@ export function resolveEscalation(
 export function getFraudTrends(): Promise<FraudTrendsResponse> {
   return apiFetch(`/analytics/fraud-trends`);
 }
+
+export type AdminSeedStep = "dataset" | "database" | "policies" | "model" | "batch";
+
+export function runAdminSeedStep(step: AdminSeedStep, token: string): Promise<{ status: string; step: string }> {
+  return apiFetch(`/admin/seed/${step}`, {
+    method: "POST",
+    headers: { "X-Admin-Token": token },
+  });
+}

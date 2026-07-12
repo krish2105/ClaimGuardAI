@@ -166,7 +166,7 @@ backend/
   data/                  # generated claims.csv / providers.csv (gitignored — see below)
 policies/                # 13 synthetic UAE-style policy documents (the RAG corpus)
 frontend/
-  src/app/               # queue, claims/[claimId], submit, escalations, analytics
+  src/app/               # queue, claims/[claimId], submit, escalations, analytics, admin
   src/components/        # shadcn-style UI primitives + domain components (trace timeline, etc.)
 docs/                    # ClaimGuard_AI_Overview.docx — plain-English project explainer
 docker-compose.yml
