@@ -28,30 +28,44 @@ single `curl` command, no shell access to the host required.
    - `ADMIN_SEED_TOKEN` is generated automatically by Render (`generateValue: true`) — you don't need to set it, just go find the value Render generated: `claimguard-backend` → **Environment** tab, after the first deploy.
 4. Deploy (first build takes a few minutes — it's building the Docker image and downloading dependencies). Once live, note the backend's URL, e.g. `https://claimguard-backend.onrender.com`.
 
-### Load the data (one HTTP call, no shell needed)
+### Load the data (five HTTP calls, no shell needed)
 
 Render's free tier gives you no interactive shell, so instead of running
-scripts against a remote database from your laptop, this repo exposes a
-one-time bootstrap endpoint on the backend itself (`app/api/routes_admin.py`).
-It generates the synthetic dataset, seeds Postgres, embeds the policy corpus
-into Qdrant, trains the fraud model, and runs all 400 claims through the
-pipeline — all in the background, inside Render's network where everything
-can actually reach everything else.
+scripts against a remote database from your laptop, this repo exposes
+one-time bootstrap endpoints on the backend itself (`app/api/routes_admin.py`).
+Each step is its own synchronous call — deliberately **not** one big
+background job — because a 512MB free-tier instance can get OOM-killed and
+silently restarted mid-job, which loses in-memory progress tracking without
+a trace. Running each step as its own request means a crash on one step
+doesn't lose the ones before it, and you know exactly which step to retry.
+
+Get `ADMIN_SEED_TOKEN` from Render → `claimguard-backend` → **Environment**
+tab first, then run these **in order**, waiting for each to finish (they
+print `{"status":"done",...}`) before the next:
 
 ```bash
-# Get ADMIN_SEED_TOKEN from Render → claimguard-backend → Environment
-curl -X POST https://claimguard-backend.onrender.com/admin/seed \
-  -H "X-Admin-Token: <the generated token>"
+TOKEN="<paste your ADMIN_SEED_TOKEN>"
+BASE="https://claimguard-backend.onrender.com"   # use your actual URL
 
-# Poll until status is "done" (takes about a minute)
-curl https://claimguard-backend.onrender.com/admin/seed/status
+curl -X POST "$BASE/admin/seed/dataset"  -H "X-Admin-Token: $TOKEN"
+curl -X POST "$BASE/admin/seed/database" -H "X-Admin-Token: $TOKEN"
+curl -X POST "$BASE/admin/seed/policies" -H "X-Admin-Token: $TOKEN"
+curl -X POST "$BASE/admin/seed/model"    -H "X-Admin-Token: $TOKEN"
+curl -X POST "$BASE/admin/seed/batch"    -H "X-Admin-Token: $TOKEN"
 ```
+
+All five are safe to re-run individually if one fails (each is idempotent).
+`render.yaml` also sets `FORCE_TFIDF_EMBEDDINGS=true` on the backend, which
+skips loading `sentence-transformers`/`torch` (a ~300-500MB memory cost)
+entirely in favor of the lightweight TF-IDF fallback embedder — the safer
+choice on a 512MB instance. If you upgrade to a paid Render plan with more
+memory, remove that env var to use the full embedding model instead.
 
 > The free-tier Qdrant service has no persistent disk, so its index is wiped
 > on every redeploy/restart of that service specifically — just re-run the
-> `curl` above afterward (it's idempotent; safe to run more than once).
-> Upgrade `claimguard-qdrant` to a paid instance type with a disk in
-> `render.yaml` if you want the index to survive restarts.
+> `policies` and `batch` steps above afterward. Upgrade `claimguard-qdrant`
+> to a paid instance type with a disk in `render.yaml` if you want the index
+> to survive restarts.
 
 ## 2. Vercel — frontend
 

@@ -13,6 +13,7 @@ is available, delete `backend/models/embedding_config.json` and re-run
 `scripts/ingest_policies.py` — it will retry sentence-transformers first.
 """
 import json
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -22,6 +23,12 @@ import numpy as np
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "models" / "embedding_config.json"
 TFIDF_PATH = Path(__file__).resolve().parents[1] / "models" / "tfidf_embedder.joblib"
 EMBED_DIM_TFIDF = 256
+
+# Hard override to skip sentence-transformers/torch entirely (~300-500MB just
+# to import), for memory-constrained hosts like a Render free-tier instance
+# (512MB total). Set FORCE_TFIDF_EMBEDDINGS=true to guarantee the lightweight
+# path is used instead of risking an OOM kill mid-request.
+FORCE_TFIDF = os.getenv("FORCE_TFIDF_EMBEDDINGS", "").strip().lower() in {"1", "true", "yes"}
 
 
 def _read_config() -> dict:
@@ -37,6 +44,8 @@ def _write_config(cfg: dict) -> None:
 
 @lru_cache
 def _try_sentence_transformer():
+    if FORCE_TFIDF:
+        return None
     try:
         from sentence_transformers import SentenceTransformer
 

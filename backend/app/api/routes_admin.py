@@ -1,69 +1,79 @@
-"""One-time data bootstrap endpoint for hosts with no shell access (e.g. a
-Render/Railway free-tier deployment with a private, internal-only Qdrant
-service). Disabled unless ADMIN_SEED_TOKEN is set — intentionally fails
-closed rather than defaulting to open, since it wipes and reloads the
-claims table.
+"""One-time data bootstrap endpoints for hosts with no shell access (e.g. a
+Render/Railway free-tier deployment). Disabled unless ADMIN_SEED_TOKEN is
+set — intentionally fails closed rather than defaulting to open, since this
+wipes and reloads the claims table.
 
-    curl -X POST https://<your-backend>/admin/seed -H "X-Admin-Token: <token>"
-    curl https://<your-backend>/admin/seed/status
+Split into separate, synchronous steps (rather than one big background job)
+specifically because a memory-constrained free-tier instance can get killed
+and silently restarted mid-job, which wiped an earlier in-memory-only
+progress tracker without a trace. Each call below blocks until that one step
+finishes and returns its own success/failure directly, so a crash on one
+step doesn't lose track of the ones before it:
+
+    curl -X POST https://<backend>/admin/seed/dataset  -H "X-Admin-Token: <token>"
+    curl -X POST https://<backend>/admin/seed/database -H "X-Admin-Token: <token>"
+    curl -X POST https://<backend>/admin/seed/policies -H "X-Admin-Token: <token>"
+    curl -X POST https://<backend>/admin/seed/model    -H "X-Admin-Token: <token>"
+    curl -X POST https://<backend>/admin/seed/batch    -H "X-Admin-Token: <token>"
+
+Run them in that order; each is safe to retry on its own if it fails.
 """
-import asyncio
-
 from fastapi import APIRouter, Header, HTTPException
 
 from app.config import get_settings
 
 router = APIRouter(tags=["admin"])
 
-_state: dict = {"status": "idle", "detail": ""}
 
-
-def _run_seed_sync() -> None:
-    global _state
-    try:
-        # Imported lazily so a normal API request never pays for loading
-        # pandas/xgboost/etc. unless this endpoint is actually used.
-        from scripts import (
-            generate_dataset,
-            ingest_policies,
-            run_pipeline_batch,
-            seed_db,
-            train_fraud_model,
-        )
-
-        _state = {"status": "running", "detail": "generating synthetic dataset"}
-        generate_dataset.main()
-
-        _state["detail"] = "seeding Postgres"
-        seed_db.main()
-
-        _state["detail"] = "ingesting policy corpus into Qdrant"
-        ingest_policies.main()
-
-        _state["detail"] = "training the XGBoost fraud model"
-        train_fraud_model.main()
-
-        _state["detail"] = "running all seeded claims through the pipeline"
-        run_pipeline_batch.main()
-
-        _state = {"status": "done", "detail": "seed complete"}
-    except Exception as exc:  # noqa: BLE001 - surface any failure via /status
-        _state = {"status": "error", "detail": str(exc)}
-
-
-@router.post("/admin/seed")
-async def trigger_seed(x_admin_token: str = Header(default="")):
+def _check_token(x_admin_token: str) -> None:
     settings = get_settings()
     if not settings.admin_seed_token or x_admin_token != settings.admin_seed_token:
         raise HTTPException(403, "Missing or invalid X-Admin-Token")
-    if _state["status"] == "running":
-        return {"status": "already_running", "detail": _state["detail"]}
-
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, _run_seed_sync)
-    return {"status": "started"}
 
 
-@router.get("/admin/seed/status")
-async def seed_status():
-    return _state
+def _run(step_name: str, fn) -> dict:
+    try:
+        fn()
+        return {"status": "done", "step": step_name}
+    except Exception as exc:  # noqa: BLE001 - surface the real error to the caller
+        raise HTTPException(500, f"{step_name} failed: {exc}") from exc
+
+
+@router.post("/admin/seed/dataset")
+async def seed_dataset(x_admin_token: str = Header(default="")):
+    _check_token(x_admin_token)
+    from scripts import generate_dataset
+
+    return _run("generate_dataset", generate_dataset.main)
+
+
+@router.post("/admin/seed/database")
+async def seed_database(x_admin_token: str = Header(default="")):
+    _check_token(x_admin_token)
+    from scripts import seed_db
+
+    return _run("seed_db", seed_db.main)
+
+
+@router.post("/admin/seed/policies")
+async def seed_policies(x_admin_token: str = Header(default="")):
+    _check_token(x_admin_token)
+    from scripts import ingest_policies
+
+    return _run("ingest_policies", ingest_policies.main)
+
+
+@router.post("/admin/seed/model")
+async def seed_model(x_admin_token: str = Header(default="")):
+    _check_token(x_admin_token)
+    from scripts import train_fraud_model
+
+    return _run("train_fraud_model", train_fraud_model.main)
+
+
+@router.post("/admin/seed/batch")
+async def seed_batch(x_admin_token: str = Header(default="")):
+    _check_token(x_admin_token)
+    from scripts import run_pipeline_batch
+
+    return _run("run_pipeline_batch", run_pipeline_batch.main)

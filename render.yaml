@@ -61,4 +61,6 @@ services:
       - key: CORS_ORIGINS
         sync: false  # set to your Vercel frontend URL once you have it, e.g. https://claimguard-ai.vercel.app
       - key: ADMIN_SEED_TOKEN
-        generateValue: true  # Render generates a random secret; read it from the dashboard to call POST /admin/seed
+        generateValue: true  # Render generates a random secret; read it from the dashboard to call the /admin/seed/* endpoints
+      - key: FORCE_TFIDF_EMBEDDINGS
+        value: "true"  # skip sentence-transformers/torch (~300-500MB) entirely — too tight a fit for the 512MB free-tier instance
